@@ -1,0 +1,81 @@
+---
+title: "BPA_cancer"
+author: "Yu He"
+date: "2024-03-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(meta)
+library(readxl)
+```
+
+
+```{r}
+setwd("~/Desktop/meta analysis/BPA_cancer")
+
+# load the data with strongest effect of OR
+meta_data_s <- read_excel("data.xlsx", sheet = "strong_or") %>% 
+  janitor::clean_names()
+
+# load the data with average effect of OR
+meta_data_a <- read_excel("data.xlsx", sheet = "average_or") %>% 
+  janitor::clean_names()
+```
+
+
+
+```{r}
+# Calculate the log of odds ratios and their standard errors
+meta_data_s <- meta_data_s %>% 
+  mutate(
+    log_odds_ratio = log(or),
+    lower_log =log(lower_ci),
+    upper_log = log(upper_ci),
+    se_log_odds_ratio = (upper_log - lower_log) / (2 * 1.96) # 1.96 is the Z value for 95% CI
+  )
+
+meta_data_a <- meta_data_a %>% 
+  mutate(
+    log_odds_ratio = log(or),
+    lower_log =log(lower_ci),
+    upper_log = log(upper_ci),
+    se_log_odds_ratio = (upper_log - lower_log) / (2 * 1.96) # 1.96 is the Z value for 95% CI
+  )
+
+# Perform meta-analysis
+meta_s_analysis <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = meta_data_s,
+  sm = "OR"
+)
+
+
+meta_a_analysis <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = meta_data_a,
+  sm = "OR"
+)
+
+
+# Summary of the meta-analysis
+summary(meta_s_analysis)
+
+summary(meta_a_analysis)
+
+# Forest plot
+forest(meta_s_analysis)
+
+forest(meta_a_analysis)
+
+```
+
+
+
+
