@@ -2,7 +2,10 @@
 title: "BPA_cancer"
 author: "Yu He"
 date: "2024-03-03"
-output: html_document
+output: 
+  html_document:
+    fig_width: 12
+    fig_height: 10
 ---
 
 ```{r setup, include=FALSE}
@@ -10,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(meta)
 library(readxl)
+library(metafor)
 ```
 
 
@@ -29,6 +33,7 @@ meta_data_a <- read_excel("data.xlsx", sheet = "average_or") %>%
 
 ```{r}
 # Calculate the log of odds ratios and their standard errors
+# strong effect of OR
 meta_data_s <- meta_data_s %>% 
   mutate(
     log_odds_ratio = log(or),
@@ -37,6 +42,7 @@ meta_data_s <- meta_data_s %>%
     se_log_odds_ratio = (upper_log - lower_log) / (2 * 1.96) # 1.96 is the Z value for 95% CI
   )
 
+# average OR
 meta_data_a <- meta_data_a %>% 
   mutate(
     log_odds_ratio = log(or),
@@ -46,6 +52,7 @@ meta_data_a <- meta_data_a %>%
   )
 
 # Perform meta-analysis
+# strong effect of OR
 meta_s_analysis <- metagen(
   TE = log_odds_ratio,
   seTE = se_log_odds_ratio,
@@ -54,7 +61,7 @@ meta_s_analysis <- metagen(
   sm = "OR"
 )
 
-
+# average OR
 meta_a_analysis <- metagen(
   TE = log_odds_ratio,
   seTE = se_log_odds_ratio,
@@ -65,16 +72,85 @@ meta_a_analysis <- metagen(
 
 
 # Summary of the meta-analysis
+# strong effect of OR
 summary(meta_s_analysis)
-
+# average OR
 summary(meta_a_analysis)
 
+
 # Forest plot
-forest(meta_s_analysis)
+# strong effect of OR
+# pdf(file = "forestplot_strongeffect.pdf", width = 12, height = 10), use to save the forest plot
+forest(meta_s_analysis, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
 
-forest(meta_a_analysis)
+# average OR
+# pdf(file = "forestplot_average.pdf", width = 12, height = 10)
+forest(meta_a_analysis, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
 
+# dev.off(), use to save the forest plot
 ```
+
+
+```{r}
+# Funnel plot
+# strong effect of OR
+funnel(meta_s_analysis)
+# average OR
+funnel(meta_a_analysis)
+
+# assess the asymmetry of funnel plot and publication bias
+# Conduct the meta-analysis using rma() function from metafor
+# strong effect of OR
+meta_s_analysis_rma <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = meta_data_s)
+
+# Perform Egger's test for publication bias
+eggers_test_s <- regtest(meta_s_analysis_rma, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_s$fit)
+
+# average OR
+meta_a_analysis_rma <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = meta_data_a)
+
+# Perform Egger's test for publication bias
+eggers_test_a <- regtest(meta_a_analysis_rma, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_a$fit)
+```
+
+
+```{r}
+# Begg's Test
+# strong effect of OR
+begg_test_s <- ranktest(meta_s_analysis_rma)
+print(begg_test_s)
+
+# average OR
+begg_test_a <- ranktest(meta_a_analysis_rma)
+print(begg_test_a)
+```
+
+
+```{r}
+# Trim and Fill Method
+# strong effect of OR
+trimfill_result_s <- trimfill(meta_s_analysis_rma, estimator = "R0")
+print(trimfill_result_s)
+
+# average OR
+trimfill_result_a <- trimfill(meta_a_analysis_rma, estimator = "R0")
+print(trimfill_result_a)
+```
+
 
 
 
