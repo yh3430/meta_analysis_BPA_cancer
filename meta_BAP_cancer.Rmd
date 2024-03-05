@@ -16,7 +16,7 @@ library(readxl)
 library(metafor)
 ```
 
-
+# Data Import
 ```{r}
 setwd("~/Desktop/meta analysis/BPA_cancer")
 
@@ -30,7 +30,7 @@ meta_data_a <- read_excel("data.xlsx", sheet = "average_or") %>%
 ```
 
 
-
+# Conduct meta analysis
 ```{r}
 # Calculate the log of odds ratios and their standard errors
 # strong effect of OR
@@ -99,6 +99,7 @@ forest(meta_a_analysis,
 ```
 
 
+# Assess the publication bias
 ```{r}
 # Funnel plot
 # strong effect of OR
@@ -150,6 +151,70 @@ print(trimfill_result_s)
 trimfill_result_a <- trimfill(meta_a_analysis_rma, estimator = "R0")
 print(trimfill_result_a)
 ```
+
+
+# Sensitivity analysis between different study types,  without cross sectional study design vs with cross sectional study design
+```{r}
+# re-code the data
+# strong effect of OR
+meta_data_s_sen <- meta_data_s %>% 
+  mutate(
+    study_design = factor(study_design, levels = c(0, 1), labels = c("case-control", "cross-sectional"))
+  )
+
+# average OR
+meta_data_a_sen <- meta_data_a %>% 
+  mutate(
+    study_design = factor(study_design, levels = c(0, 1), labels = c("case-control", "cross-sectional"))
+  )
+```
+
+
+```{r}
+# strong effect of OR without cross sectional study design
+meta_s_analysis_sen <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_sen, study_design == "case-control"),
+  sm = "OR"
+)
+
+# average OR without cross sectional study design
+meta_a_analysis_sen <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_sen, study_design == "case-control"),
+  sm = "OR"
+)
+
+
+# Summary of the meta-analysis
+# strong effect of OR
+summary(meta_s_analysis_sen)
+summary(meta_s_analysis)
+
+# average OR
+summary(meta_a_analysis_sen)
+summary(meta_a_analysis)
+```
+
+
+```{r}
+# Funnel plot
+# strong effect of OR
+funnel(meta_s_analysis_sen)
+# average OR
+funnel(meta_a_analysis_sen)
+```
+
+
+
+
+
+
+
 
 
 
