@@ -153,6 +153,7 @@ print(trimfill_result_a)
 ```
 
 
+
 # Sensitivity analysis between different study types,  without cross sectional study design vs with cross sectional study design
 ```{r}
 # re-code the data
@@ -172,7 +173,7 @@ meta_data_a_sen <- meta_data_a %>%
 
 ```{r}
 # strong effect of OR without cross sectional study design
-meta_s_analysis_sen <- metagen(
+meta_s_analysis_cc <- metagen(
   TE = log_odds_ratio,
   seTE = se_log_odds_ratio,
   studlab = paste(auther),
@@ -181,7 +182,7 @@ meta_s_analysis_sen <- metagen(
 )
 
 # average OR without cross sectional study design
-meta_a_analysis_sen <- metagen(
+meta_a_analysis_cc <- metagen(
   TE = log_odds_ratio,
   seTE = se_log_odds_ratio,
   studlab = paste(auther),
@@ -192,23 +193,192 @@ meta_a_analysis_sen <- metagen(
 
 # Summary of the meta-analysis
 # strong effect of OR
-summary(meta_s_analysis_sen)
+summary(meta_s_analysis_cc)
 summary(meta_s_analysis)
 
 # average OR
-summary(meta_a_analysis_sen)
+summary(meta_a_analysis_cc)
+summary(meta_a_analysis)
+```
+
+
+
+```{r}
+# only cross sectional study
+meta_s_analysis_cs <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_sen, study_design == "cross-sectional"),
+  sm = "OR"
+)
+
+summary(meta_s_analysis_cs)
+funnel(meta_s_analysis_cs)
+
+meta_a_analysis_cs <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_sen, study_design == "cross-sectional"),
+  sm = "OR"
+)
+
+summary(meta_a_analysis_cs)
+funnel(meta_a_analysis_cs)
+```
+
+
+```{r}
+# Funnel plot 
+# strong effect of OR
+funnel(meta_s_analysis_cc)
+# average OR
+funnel(meta_a_analysis_cc)
+```
+
+# remove 'Keshavarz4_urine', 'Keshavarz4_tissue', 'Hong8', 'Marotta23' study due to large 95% CI
+```{r}
+# strong effect OR
+meta_data_s_remove <- meta_data_s %>% 
+  filter(!(auther %in% c('Keshavarz4_urine', 'Keshavarz4_tissue', 'Hong8', 'Marotta23')))
+
+
+meta_s_analysis_remove <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = meta_data_s_remove,
+  sm = "OR"
+)
+
+summary(meta_s_analysis_remove)
+summary(meta_s_analysis)
+
+
+# average OR
+meta_data_a_remove <- meta_data_a %>% 
+  filter(!(auther %in% c('Keshavarz4_urine', 'Keshavarz4_tissue', 'Hong8', 'Marotta23')))
+
+
+meta_a_analysis_remove <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = meta_data_a_remove,
+  sm = "OR"
+)
+
+summary(meta_a_analysis_remove)
 summary(meta_a_analysis)
 ```
 
 
 ```{r}
-# Funnel plot
-# strong effect of OR
-funnel(meta_s_analysis_sen)
+# subgroup - nation after remove some papers
+# strong effect OR
+meta_data_s_na <- meta_data_s_remove %>% 
+  mutate(
+    region_code = ifelse(region == "China", 0, 1)
+  )
+
+meta_s_analysis_china <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_na, region_code == "0"), # China
+  sm = "OR"
+)
+
+meta_s_analysis_other <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_na, region_code == "1"), # other region
+  sm = "OR"
+)
+
+summary(meta_s_analysis_china)
+summary(meta_s_analysis_other)
+summary(meta_s_analysis)
+
 # average OR
-funnel(meta_a_analysis_sen)
+meta_data_a_na <- meta_data_a_remove %>% 
+  mutate(
+    region_code = ifelse(region == "China", 0, 1)
+  )
+
+meta_a_analysis_china <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_na, region_code == "0"), # China
+  sm = "OR"
+)
+
+meta_a_analysis_other <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_na, region_code == "1"), # other region
+  sm = "OR"
+)
+
+summary(meta_a_analysis_remove)
+summary(meta_a_analysis)
 ```
 
+
+
+
+# subgroup meta_analysis. In the above sensitivity analysis we kind of do the subgroup of study designs. The results show high heterogenetity. 
+```{r}
+# subgroup - nation
+# strong effect OR
+meta_data_s_na <- meta_data_s %>% 
+  mutate(
+    region_code = ifelse(region == "China", 0, 1)
+  )
+
+meta_s_analysis_china <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_na, region_code == "0"), # China
+  sm = "OR"
+)
+
+
+meta_s_analysis_other <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_na, region_code == "1"), # other region
+  sm = "OR"
+)
+
+# average OR
+meta_data_a_na <- meta_data_a %>% 
+  mutate(
+    region_code = ifelse(region == "China", 0, 1)
+  )
+
+meta_a_analysis_china <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_na, region_code == "0"), # China
+  sm = "OR"
+)
+
+meta_a_analysis_other <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_na, region_code == "1"), # other region
+  sm = "OR"
+)
+```
 
 
 

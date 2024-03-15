@@ -1,0 +1,654 @@
+---
+title: "meta_BPA_cancer_remove"
+author: "Yu He"
+date: "2024-03-07"
+output: 
+  html_document:
+    fig_width: 12
+    fig_height: 10
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(meta)
+library(readxl)
+library(metafor)
+```
+
+
+# Data Import，remove 'Keshavarz4_urine', 'Keshavarz4_tissue', 'Hong8', 'Marotta23' study due to large 95% CI
+```{r}
+setwd("~/Desktop/meta analysis/BPA_cancer")
+
+# load the data with strongest effect of OR
+meta_data_s_remove <- read_excel("data.xlsx", sheet = "strong_or") %>% 
+  janitor::clean_names() %>% 
+  filter(!(auther %in% c('Keshavarz4_urine', 'Keshavarz4_tissue', 'Hong8', 'Marotta23'))) 
+
+# load the data with average effect of OR
+meta_data_a_remove <- read_excel("data.xlsx", sheet = "average_or") %>% 
+  janitor::clean_names() %>% 
+  filter(!(auther %in% c('Keshavarz4_urine', 'Keshavarz4_tissue', 'Hong8', 'Marotta23'))) 
+
+# Calculate the log of odds ratios and their standard errors
+# strong effect of OR
+meta_data_s_remove <- meta_data_s_remove %>% 
+  mutate(
+    log_odds_ratio = log(or),
+    lower_log =log(lower_ci),
+    upper_log = log(upper_ci),
+    se_log_odds_ratio = (upper_log - lower_log) / (2 * 1.96) # 1.96 is the Z value for 95% CI
+  )
+
+# average OR
+meta_data_a_remove <-meta_data_a_remove %>% 
+  mutate(
+    log_odds_ratio = log(or),
+    lower_log =log(lower_ci),
+    upper_log = log(upper_ci),
+    se_log_odds_ratio = (upper_log - lower_log) / (2 * 1.96) # 1.96 is the Z value for 95% CI
+  )
+```
+
+
+# Part 1, general meta analysis
+```{r}
+# strong effect OR
+meta_s_analysis_remove <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = meta_data_s_remove,
+  sm = "OR"
+)
+
+summary(meta_s_analysis_remove)
+
+# average OR
+meta_a_analysis_remove <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = meta_data_a_remove,
+  sm = "OR"
+)
+
+summary(meta_a_analysis_remove)
+```
+
+
+## Assess the publication bias of general meta analysis
+```{r}
+# Funnel plot
+# strong effect of OR
+funnel(meta_s_analysis_remove)
+# average OR
+funnel(meta_a_analysis_remove)
+
+# assess the asymmetry of funnel plot and publication bias
+# Conduct the meta-analysis using rma() function from metafor
+# strong effect of OR
+meta_s_analysis_rma <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = meta_data_s_remove)
+
+# Perform Egger's test for publication bias
+eggers_test_s <- regtest(meta_s_analysis_rma, model = "lm")
+
+# Output the results of Egger's test
+summary(meta_s_analysis_rma)
+summary(eggers_test_s$fit)
+
+# average OR
+meta_a_analysis_rma <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = meta_data_a_remove)
+
+# Perform Egger's test for publication bias
+eggers_test_a <- regtest(meta_a_analysis_rma, model = "lm")
+
+# Output the results of Egger's test
+summary(meta_a_analysis_rma)
+summary(eggers_test_a$fit)
+```
+
+
+```{r}
+# Begg's Test
+# strong effect of OR
+begg_test_s <- ranktest(meta_s_analysis_rma)
+print(begg_test_s)
+
+# average OR
+begg_test_a <- ranktest(meta_a_analysis_rma)
+print(begg_test_a)
+```
+
+
+```{r}
+# Trim and Fill Method
+# strong effect of OR
+trimfill_result_s <- trimfill(meta_s_analysis_rma, estimator = "R0")
+print(trimfill_result_s)
+
+# average OR
+trimfill_result_a <- trimfill(meta_a_analysis_rma, estimator = "R0")
+print(trimfill_result_a)
+```
+
+
+
+
+# Part 2, subgroup region, China vs None-China
+```{r}
+# subgroup - nation 
+# strong effect OR
+meta_data_s_na <- meta_data_s_remove %>% 
+  mutate(
+    region_code = ifelse(region == "China", 0, 1)
+  )
+
+meta_s_analysis_china <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_na, region_code == "0"), # China
+  sm = "OR"
+)
+
+
+meta_s_analysis_other <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_na, region_code == "1"), # other region
+  sm = "OR"
+)
+
+summary(meta_s_analysis_china)
+summary(meta_s_analysis_other)
+summary(meta_s_analysis_remove)
+
+# average OR
+meta_data_a_na <- meta_data_a_remove %>% 
+  mutate(
+    region_code = ifelse(region == "China", 0, 1)
+  )
+
+meta_a_analysis_china <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_na, region_code == "0"), # China
+  sm = "OR"
+)
+
+meta_a_analysis_other <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_na, region_code == "1"), # other region
+  sm = "OR"
+)
+
+summary(meta_a_analysis_china)
+summary(meta_a_analysis_other)
+summary(meta_a_analysis_remove)
+```
+
+
+
+## Assess the publication bias of subgroup - China
+```{r}
+# Funnel plot
+# strong effect of OR
+funnel(meta_s_analysis_china)
+funnel(meta_s_analysis_other)
+# average OR
+funnel(meta_a_analysis_china)
+funnel(meta_a_analysis_other)
+```
+
+
+```{r}
+# assess the asymmetry of funnel plot and publication bias
+# Conduct the meta-analysis using rma() function from metafor
+# strong effect of OR
+meta_s_analysis_rma_china <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_s_na, region_code == "0"))
+
+# Perform Egger's test for publication bias
+eggers_test_s_china <- regtest(meta_s_analysis_rma_china, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_s_china$fit)
+
+# average OR
+meta_a_analysis_rma_china <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_a_na, region_code == "0"))
+
+# Perform Egger's test for publication bias
+eggers_test_a_china <- regtest(meta_a_analysis_rma_china, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_a_china$fit)
+```
+
+
+```{r}
+# Begg's Test
+# strong effect of OR
+begg_test_s_china <- ranktest(meta_s_analysis_rma_china)
+print(begg_test_s_china)
+
+# average OR
+begg_test_a_china <- ranktest(meta_a_analysis_rma_china)
+print(begg_test_a_china)
+```
+
+
+```{r}
+# Trim and Fill Method
+# strong effect of OR
+trimfill_result_s_china <- trimfill(meta_s_analysis_rma_china, estimator = "R0")
+summary(trimfill_result_s_china)
+
+# average OR
+trimfill_result_a_china <- trimfill(meta_a_analysis_rma_china, estimator = "R0")
+summary(trimfill_result_a_china)
+```
+
+
+## Assess the publication bias of subgroup - other region
+```{r}
+# assess the asymmetry of funnel plot and publication bias
+# Conduct the meta-analysis using rma() function from metafor
+# strong effect of OR
+meta_s_analysis_rma_other <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_a_na, region_code == "1"))
+
+# Perform Egger's test for publication bias
+eggers_test_s_other <- regtest(meta_s_analysis_rma_other, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_s_other$fit)
+
+# average OR
+meta_a_analysis_rma_other <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_a_na, region_code == "0"))
+
+# Perform Egger's test for publication bias
+eggers_test_a_other <- regtest(meta_a_analysis_rma_other, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_a_other$fit)
+```
+
+
+```{r}
+# Begg's Test
+# strong effect of OR
+begg_test_s_other <- ranktest(meta_s_analysis_rma_other)
+begg_test_s_other
+
+# average OR
+begg_test_a_other <- ranktest(meta_a_analysis_rma_other)
+begg_test_a_other
+```
+
+
+```{r}
+# Trim and Fill Method
+# strong effect of OR
+trimfill_result_s_other <- trimfill(meta_s_analysis_rma_other, estimator = "R0")
+trimfill_result_s_other
+
+# average OR
+trimfill_result_a_other <- trimfill(meta_a_analysis_rma_other, estimator = "R0")
+trimfill_result_a_other
+```
+
+
+# Part 3, subgroup study design, cross sectional vs case control
+```{r}
+# re-code the data
+# strong effect of OR
+meta_data_s_sen <- meta_data_s_remove %>% 
+  mutate(
+    study_design = factor(study_design, levels = c(0, 1), labels = c("case-control", "cross-sectional"))
+  )
+
+# average OR
+meta_data_a_sen <- meta_data_a_remove %>% 
+  mutate(
+    study_design = factor(study_design, levels = c(0, 1), labels = c("case-control", "cross-sectional"))
+  )
+```
+
+
+```{r}
+# strong effect of OR 
+# case control study
+meta_s_analysis_cc <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_sen, study_design == "case-control"),
+  sm = "OR"
+)
+
+# cross sectional study
+meta_s_analysis_cs <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_sen, study_design == "cross-sectional"),
+  sm = "OR"
+)
+
+# average OR 
+# case control study
+meta_a_analysis_cc <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_sen, study_design == "case-control"),
+  sm = "OR"
+)
+
+# cross sectional study
+meta_a_analysis_cs <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_sen, study_design == "cross-sectional"),
+  sm = "OR"
+)
+
+# Summary of the meta-analysis
+# strong effect of OR
+summary(meta_s_analysis_cc)
+summary(meta_s_analysis_cs)
+summary(meta_s_analysis_remove)
+
+# average OR
+summary(meta_a_analysis_cc)
+summary(meta_a_analysis_cs)
+summary(meta_a_analysis_remove)
+```
+
+
+```{r}
+# Funnel plot 
+# strong effect of OR
+funnel(meta_s_analysis_cc)
+funnel(meta_s_analysis_cs)
+# average OR
+funnel(meta_a_analysis_cc)
+funnel(meta_s_analysis_cs)
+```
+
+
+## Assess the publication bias subgroup study design, case control
+```{r}
+# assess the asymmetry of funnel plot and publication bias
+# Conduct the meta-analysis using rma() function from metafor
+# strong effect of OR
+meta_s_analysis_rma_cc <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_s_sen, study_design == "case-control"))
+
+# Perform Egger's test for publication bias
+eggers_test_s_cc <- regtest(meta_s_analysis_rma_cc, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_s_cc$fit)
+
+# average OR
+meta_a_analysis_rma_cc <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_a_sen, study_design == "case-control"))
+
+# Perform Egger's test for publication bias
+eggers_test_a_cc <- regtest(meta_a_analysis_rma_cc, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_a_cc$fit)
+```
+
+
+```{r}
+# Begg's Test
+# strong effect of OR
+begg_test_s_cc <- ranktest(meta_s_analysis_rma_cc)
+print(begg_test_s_cc)
+
+# average OR
+begg_test_a_cc <- ranktest(meta_a_analysis_rma_cc)
+print(begg_test_a_cc)
+```
+
+
+```{r}
+# Trim and Fill Method
+# strong effect of OR
+trimfill_result_s_cc <- trimfill(meta_s_analysis_rma_cc, estimator = "R0")
+print(trimfill_result_s_cc)
+
+# average OR
+trimfill_result_a_cc <- trimfill(meta_a_analysis_rma_cc, estimator = "R0")
+print(trimfill_result_a_cc)
+```
+
+
+## Assess the publication bias subgroup study design, cross sectional
+```{r}
+# assess the asymmetry of funnel plot and publication bias
+# Conduct the meta-analysis using rma() function from metafor
+# strong effect of OR
+meta_s_analysis_rma_cs <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_s_sen, study_design == "cross-sectional"))
+
+# Perform Egger's test for publication bias
+eggers_test_s_cs <- regtest(meta_s_analysis_rma_cs, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_s_cs$fit)
+
+# average OR
+meta_a_analysis_rma_cs <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_a_sen, study_design == "cross-sectional"))
+
+# Perform Egger's test for publication bias
+eggers_test_a_cs <- regtest(meta_a_analysis_rma_cs, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_a_cs$fit)
+```
+
+
+```{r}
+# Begg's Test
+# strong effect of OR
+begg_test_s_cs <- ranktest(meta_s_analysis_rma_cs)
+print(begg_test_s_cs)
+
+# average OR
+begg_test_a_cs <- ranktest(meta_a_analysis_rma_cs)
+print(begg_test_a_cs)
+```
+
+
+```{r}
+# Trim and Fill Method
+# strong effect of OR
+trimfill_result_s_cs <- trimfill(meta_s_analysis_rma_cs, estimator = "R0")
+print(trimfill_result_s_cs)
+
+# average OR
+trimfill_result_a_cs <- trimfill(meta_a_analysis_rma_cs, estimator = "R0")
+print(trimfill_result_a_cs)
+```
+
+
+# Part 4, subgroup sample method, urine (= 1) vs other (= 0, 2, and 3)
+```{r}
+# re-code the data
+# strong effect of OR
+meta_data_s_sm <- meta_data_s_remove %>% 
+  mutate(
+    samplemethod_code = ifelse(sample_method %in% c("1", "2"), 1, 0) # urine = 1, other = 0
+  ) 
+
+# average OR
+meta_data_a_sm <- meta_data_a_remove %>% 
+  mutate(
+    samplemethod_code = ifelse(sample_method %in% c("1", "2"), 1, 0) # urine = 1, other = 0
+  )
+```
+
+
+```{r}
+# strong effect of OR, urine = 1, other = 0
+# urine sample method
+meta_s_analysis_ur <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_sm, samplemethod_code == "1"),
+  sm = "OR"
+)
+
+# other sample method
+meta_s_analysis_ot <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_s_sm, samplemethod_code == "0"),
+  sm = "OR"
+)
+
+# average OR, urine = 1, other = 0 
+# urine sample method
+meta_a_analysis_ur <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_sm, samplemethod_code == "1"),
+  sm = "OR"
+)
+
+# other sample method
+meta_a_analysis_ot <- metagen(
+  TE = log_odds_ratio,
+  seTE = se_log_odds_ratio,
+  studlab = paste(auther),
+  data = subset(meta_data_a_sm, samplemethod_code == "0"),
+  sm = "OR"
+)
+
+# Summary of the meta-analysis
+# strong effect of OR
+summary(meta_s_analysis_ur)
+summary(meta_s_analysis_ot)
+summary(meta_s_analysis_remove)
+
+# average OR
+summary(meta_a_analysis_ur)
+summary(meta_a_analysis_ot)
+summary(meta_a_analysis_remove)
+```
+
+
+
+## Assess the publication bias, subgroup sample method, urine (= 1) 
+```{r}
+# assess the asymmetry of funnel plot and publication bias
+# Conduct the meta-analysis using rma() function from metafor
+# strong effect of OR
+meta_s_analysis_rma_ur <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_s_sm, samplemethod_code == "1"))
+
+# Perform Egger's test for publication bias
+eggers_test_s_ur <- regtest(meta_s_analysis_rma_ur, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_s_ur$fit)
+
+# average OR
+meta_a_analysis_rma_ur <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_a_sm, samplemethod_code == "1"))
+
+# Perform Egger's test for publication bias
+eggers_test_a_ur <- regtest(meta_a_analysis_rma_ur, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_a_ur$fit)
+```
+
+
+```{r}
+# Begg's Test
+# strong effect of OR
+begg_test_s_ur <- ranktest(meta_s_analysis_rma_ur)
+print(begg_test_s_ur)
+
+# average OR
+begg_test_a_ur <- ranktest(meta_a_analysis_rma_ur)
+print(begg_test_a_ur)
+```
+
+
+```{r}
+# Trim and Fill Method
+# strong effect of OR
+trimfill_result_s_ur <- trimfill(meta_s_analysis_rma_ur, estimator = "R0")
+print(trimfill_result_s_ur)
+
+# average OR
+trimfill_result_a_ur <- trimfill(meta_a_analysis_rma_ur, estimator = "R0")
+print(trimfill_result_a_ur)
+```
+
+
+## Assess the publication bias, subgroup sample method, other (= 0, 2, and 3)
+```{r}
+# assess the asymmetry of funnel plot and publication bias
+# Conduct the meta-analysis using rma() function from metafor
+# strong effect of OR
+meta_s_analysis_rma_ot <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_s_sm, samplemethod_code == "0"))
+
+# Perform Egger's test for publication bias
+eggers_test_s_ot <- regtest(meta_s_analysis_rma_ot, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_s_ot$fit)
+
+# average OR
+meta_a_analysis_rma_ot <- rma(yi = log_odds_ratio, sei = se_log_odds_ratio, method = "REML", data = subset(meta_data_a_sm, samplemethod_code == "0"))
+
+# Perform Egger's test for publication bias
+eggers_test_a_ot <- regtest(meta_a_analysis_rma_ot, model = "lm")
+
+# Output the results of Egger's test
+summary(eggers_test_a_ot$fit)
+```
+
+
+```{r}
+# Begg's Test
+# strong effect of OR
+begg_test_s_ot <- ranktest(meta_s_analysis_rma_ot)
+print(begg_test_s_ot)
+
+# average OR
+begg_test_a_ot <- ranktest(meta_a_analysis_rma_ot)
+print(begg_test_a_ot)
+```
+
+
+```{r}
+# Trim and Fill Method
+# strong effect of OR
+trimfill_result_s_ot <- trimfill(meta_s_analysis_rma_ot, estimator = "R0")
+print(trimfill_result_s_ot)
+
+# average OR
+trimfill_result_a_ot <- trimfill(meta_a_analysis_rma_ot, estimator = "R0")
+print(trimfill_result_a_ot)
+```
+
+
+
+
+
+
+
+
+
+
