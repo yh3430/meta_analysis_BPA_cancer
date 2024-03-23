@@ -75,6 +75,25 @@ meta_a_analysis_remove <- metagen(
 )
 
 summary(meta_a_analysis_remove)
+
+
+# Forest plot
+# strong effect of OR
+# pdf(file = "forestplot_strongeffect.pdf", width = 12, height = 10), use to save the forest plot
+forest(meta_s_analysis_remove, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+# average OR
+# pdf(file = "forestplot_average.pdf", width = 12, height = 10)
+forest(meta_a_analysis_remove, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+# dev.off(), use to save the forest plot
 ```
 
 
@@ -82,9 +101,12 @@ summary(meta_a_analysis_remove)
 ```{r}
 # Funnel plot
 # strong effect of OR
+# pdf(file = "funnelplot_strongeffect.pdf", width = 12, height = 10)
 funnel(meta_s_analysis_remove)
 # average OR
+# pdf(file = "funnelplot_average.pdf", width = 12, height = 10)
 funnel(meta_a_analysis_remove)
+# dev.off()
 
 # assess the asymmetry of funnel plot and publication bias
 # Conduct the meta-analysis using rma() function from metafor
@@ -195,15 +217,59 @@ summary(meta_a_analysis_remove)
 
 
 
+```{r}
+# Forest plot
+# strong effect of OR
+#pdf(file = "forestplot_strongeffect_china.pdf", width = 12, height = 10)
+forest(meta_s_analysis_china, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+#pdf(file = "forestplot_strongeffect_otherregion.pdf", width = 12, height = 10)
+forest(meta_s_analysis_other, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+# average OR
+#pdf(file = "forestplot_average_china.pdf", width = 12, height = 10)
+forest(meta_a_analysis_china, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+
+#pdf(file = "forestplot_average_otherregion.pdf", width = 12, height = 10)
+forest(meta_a_analysis_other, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+#dev.off()
+```
+
+
+
 ## Assess the publication bias of subgroup - China
 ```{r}
 # Funnel plot
 # strong effect of OR
+# pdf(file = "funnelplot_strongeffect_china.pdf", width = 12, height = 10)
 funnel(meta_s_analysis_china)
+# pdf(file = "funnelplot_strongeffect_otherregion.pdf", width = 12, height = 10)
 funnel(meta_s_analysis_other)
 # average OR
+# pdf(file = "funnelplot_average_china.pdf", width = 12, height = 10)
 funnel(meta_a_analysis_china)
+# pdf(file = "funnelplot_average_otherregion.pdf", width = 12, height = 10)
 funnel(meta_a_analysis_other)
+# dev.off()
+
 ```
 
 
@@ -372,13 +438,55 @@ summary(meta_a_analysis_remove)
 
 
 ```{r}
+# Forest plot
+# strong effect of OR
+#pdf(file = "forestplot_strongeffect_cc.pdf", width = 12, height = 10)
+forest(meta_s_analysis_cc, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+#pdf(file = "forestplot_strongeffect_cs.pdf", width = 12, height = 10)
+forest(meta_s_analysis_cs, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+# average OR
+#pdf(file = "forestplot_average_cc.pdf", width = 12, height = 10)
+forest(meta_a_analysis_cc, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+
+#pdf(file = "forestplot_average_cs.pdf", width = 12, height = 10)
+forest(meta_a_analysis_cs, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+#dev.off()
+```
+
+
+```{r}
 # Funnel plot 
 # strong effect of OR
+#pdf(file = "fuunelplot_strongeffect_cc.pdf", width = 12, height = 10)
 funnel(meta_s_analysis_cc)
+#pdf(file = "fuunelplot_strongeffect_cs.pdf", width = 12, height = 10)
 funnel(meta_s_analysis_cs)
 # average OR
+#pdf(file = "fuunelplot_average_cc.pdf", width = 12, height = 10)
 funnel(meta_a_analysis_cc)
+#pdf(file = "fuunelplot_average_cs.pdf", width = 12, height = 10)
 funnel(meta_s_analysis_cs)
+#dev.off()
 ```
 
 
@@ -547,6 +655,57 @@ summary(meta_a_analysis_remove)
 ```
 
 
+```{r}
+# Forest plot
+# strong effect of OR
+#pdf(file = "forestplot_strongeffect_ur.pdf", width = 12, height = 10)
+forest(meta_s_analysis_ur, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+#pdf(file = "forestplot_strongeffect_ot.pdf", width = 12, height = 10)
+forest(meta_s_analysis_ot, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+# average OR
+#pdf(file = "forestplot_average_ur.pdf", width = 12, height = 10)
+forest(meta_a_analysis_ur, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+
+#pdf(file = "forestplot_average_ot.pdf", width = 12, height = 10)
+forest(meta_a_analysis_ot, 
+       sortvar = TE,
+       prediction = TRUE,
+       leftlabs = c("Author", "g", "SE")
+       )
+
+#dev.off()
+```
+
+
+```{r}
+# Funnel plot 
+# strong effect of OR
+#pdf(file = "fuunelplot_strongeffect_ur.pdf", width = 12, height = 10)
+funnel(meta_s_analysis_ur)
+#pdf(file = "fuunelplot_strongeffect_ot.pdf", width = 12, height = 10)
+funnel(meta_s_analysis_ot)
+# average OR
+#pdf(file = "fuunelplot_average_ur.pdf", width = 12, height = 10)
+funnel(meta_a_analysis_ur)
+#pdf(file = "fuunelplot_average_ot.pdf", width = 12, height = 10)
+funnel(meta_s_analysis_ot)
+#dev.off()
+```
 
 ## Assess the publication bias, subgroup sample method, urine (= 1) 
 ```{r}
@@ -642,6 +801,7 @@ print(trimfill_result_s_ot)
 trimfill_result_a_ot <- trimfill(meta_a_analysis_rma_ot, estimator = "R0")
 print(trimfill_result_a_ot)
 ```
+
 
 
 
